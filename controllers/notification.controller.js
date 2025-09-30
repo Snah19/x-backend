@@ -161,7 +161,7 @@ export const getTotalUnreadNotifications = async (req, res) => {
   const userId = req.user._id;
   try {
     const all = await Notification.countDocuments({ to: userId, read: false });
-    const follows = await Notification.countDocuments({ to: userId, type: "follows", read: false });
+    const follows = await Notification.countDocuments({ to: userId, type: "follow", read: false });
     const likes = await Notification.countDocuments({ to: userId, type: "like", read: false });
     const comments = await Notification.countDocuments({ to: userId, type: "comment", read: false });
     const favorites = await Notification.countDocuments({ to: userId, type: "favorite", read: false });
