@@ -9,97 +9,24 @@ export const getNotifications = async (req, res) => {
     const limit = Number(req.query.limit) || 10;
     const skip = (page - 1) * limit;
 
-    if (type === "all") {
-      const notifications = await Notification.find({ to: userId })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate({ path: "from", select: "username profileImg" })
-        .populate({ path: "to", select: "username" })
-        .populate({ path: "post", select: "text" })
-        .sort({ createdAt: -1 });
-      // await Notification.updateMany({ to: userId }, { read: true });
-
-      const total = await Notification.countDocuments({ to: userId });
-      const hasNextPage = page * limit < total;
-
-      res.status(200).json({ data: notifications, nextPage: hasNextPage ? page + 1 : null });
+    const filter = { to: userId };
+    if (type && type !== "all") {
+      filter.type = type;
     }
-    else if (type === "follow") {
-      const notifications = await Notification.find({ to: userId, type: "follow" })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate({ path: "from", select: "username profileImg" })
-        .populate({ path: "post", select: "text" })
-        .sort({ createdAt: -1 });
-      // await Notification.updateMany({ to: userId }, { read: true });
 
-      const total = await Notification.countDocuments({ to: userId });
-      const hasNextPage = page * limit < total;
+    const notifications = await Notification.find(filter)
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .populate({ path: "from", select: "username profileImg" })
+      .populate({ path: "to", select: "username" })
+      .populate({ path: "post", select: "text" })
+      .sort({ createdAt: -1 });
 
-      res.status(200).json({ data: notifications, nextPage: hasNextPage ? page + 1 : null });
-    }
-    else if (type === "like") {
-      const notifications = await Notification.find({ to: userId, type: "like" })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate({ path: "from", select: "username profileImg" })
-        .populate({ path: "post", select: "text" })
-        .sort({ createdAt: -1 });
-      // await Notification.updateMany({ to: userId }, { read: true });
+    const total = await Notification.countDocuments(filter);
+    const hasNextPage = page * limit < total;
 
-      const total = await Notification.countDocuments({ to: userId });
-      const hasNextPage = page * limit < total;
-
-      res.status(200).json({ data: notifications, nextPage: hasNextPage ? page + 1 : null });
-    }
-    else if (type === "comment") {
-      const notifications = await Notification.find({ to: userId, type: "comment" })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate({ path: "from", select: "username profileImg" })
-        .populate({ path: "post", select: "text" })
-        .sort({ createdAt: -1 });
-      // await Notification.updateMany({ to: userId }, { read: true });
-
-      const total = await Notification.countDocuments({ to: userId });
-      const hasNextPage = page * limit < total;
-
-      res.status(200).json({ data: notifications, nextPage: hasNextPage ? page + 1 : null });
-    }
-    else if (type === "repost") {
-      const notifications = await Notification.find({ to: userId, type: "repost" })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate({ path: "from", select: "username profileImg" })
-        .populate({ path: "post", select: "text" })
-        .sort({ createdAt: -1 });
-      // await Notification.updateMany({ to: userId }, { read: true });
-
-      const total = await Notification.countDocuments({ to: userId });
-      const hasNextPage = page * limit < total;
-
-      res.status(200).json({ data: notifications, nextPage: hasNextPage ? page + 1 : null });
-    }
-    else if (type === "favorite") {
-      const notifications = await Notification.find({ to: userId, type: "favorite" })
-        .sort({ createdAt: -1 })
-        .skip(skip)
-        .limit(limit)
-        .populate({ path: "from", select: "username profileImg" })
-        .populate({ path: "post", select: "text" })
-        .sort({ createdAt: -1 });
-      // await Notification.updateMany({ to: userId }, { read: true });
-
-      const total = await Notification.countDocuments({ to: userId });
-      const hasNextPage = page * limit < total;
-
-      res.status(200).json({ data: notifications, nextPage: hasNextPage ? page + 1 : null });
-    }
+    res.status(200).json({ data: notifications, nextPage: hasNextPage ? page + 1 : null });
   }
   catch (error) {
     console.log("Error getting notifications:", error.message);
