@@ -23,7 +23,7 @@ export const getUserProfile = async (req, res) => {
 
 export const getSuggestedUser = async (req, res) => {
   try {
-    const userId = req.user._id;
+    const { userId } = req.params;
     const { following } = await User.findById(userId, { _id: 0, following: 1 });
 
     const users = await User.aggregate(
@@ -51,12 +51,12 @@ export const getSuggestedUser = async (req, res) => {
 
 export const followUnfollowUser = async (req, res) => {
   const { username } = req.params;
-
+  const { userId } = req.body;
   try {
     const targetUser = await User.findOne({ username });
-    const currentUser = await User.findById(req.user._id);
+    const currentUser = await User.findById(userId);
 
-    if (targetUser?._id.toString() === req.user._id.toString()) {
+    if (targetUser?._id.toString() === currentUser._id.toString()) {
       res.status(400).json({ message: "You can't follow yourself" });
       return;
     }
@@ -70,20 +70,20 @@ export const followUnfollowUser = async (req, res) => {
 
     if (isFollowing) {
       // Unfollow the user
-      await User.findByIdAndUpdate(targetUser?._id,  { $pull: { followers: req.user._id } });
-      await User.findByIdAndUpdate(req.user._id, { $pull: { following: targetUser?._id } });
+      await User.findByIdAndUpdate(targetUser?._id,  { $pull: { followers: currentUser?._id } });
+      await User.findByIdAndUpdate(currentUser?._id, { $pull: { following: targetUser?._id } });
 
       res.status(200).json({ message: "User unfollowed successfully" });
     }
     else {
       // Follow the user
-      await User.findByIdAndUpdate(targetUser?._id, { $push: { followers: req.user._id } });
-      await User.findByIdAndUpdate(req.user._id, { $push: { following: targetUser?._id } });
+      await User.findByIdAndUpdate(targetUser?._id, { $push: { followers: currentUser?._id } });
+      await User.findByIdAndUpdate(currentUser?._id, { $push: { following: targetUser?._id } });
 
       // Send notification to the user
       const newNotification = new Notification({
         type: "follow",
-        from: req.user._id,
+        from: currentUser?._id,
         to: targetUser?._id,
       });
 
@@ -100,9 +100,8 @@ export const followUnfollowUser = async (req, res) => {
 };
 
 export const updateProfile = async (req, res) => {
-  const userId = req.user._id;
+  const { userId } = req.params;
   const { username, fullname, email, link, bio, currentPassword, newPassword, profileImg, coverImg } = req.body;
-
   try {
     let user = await User.findById(userId);
     if (!user) {
@@ -112,7 +111,7 @@ export const updateProfile = async (req, res) => {
     // Check if username is taken
     if (username) {
       const existingUser = await User.findOne({ username });
-      if (existingUser && existingUser._id.toString() !== user._id.toString()) {
+      if (existingUser && existingUser._id.toString() !== userId) {
         return res.status(400).json({ message: `Username: ${username} is unavailable` });
       }
     }
@@ -120,7 +119,7 @@ export const updateProfile = async (req, res) => {
     // Check if email is taken
     if (email) {
       const existingUser = await User.findOne({ email });
-      if (existingUser && existingUser._id.toString() !== user._id.toString()) {
+      if (existingUser && existingUser._id.toString() !== userId) {
         return res.status(400).json({ message: `Email: ${email} is unavailable` });
       }
     }

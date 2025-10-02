@@ -62,60 +62,14 @@ export const signup = async (req, res) => {
   }
 };
 
-export const login = async (req, res) => {
+export const getSessionUser = async (req, res) => {
+  const { username } = req.params;
   try {
-    const { username, password } = req.body;
-    const user = await User.findOne({ username });
-    const isPasswordMatched = await bcrypt.compare(password, user?.password || "");
-
-    if (!user) {
-      res.status(400).json({ message: `Cannot find username: ${username}` });
-      return;
-    }
-
-    if (!isPasswordMatched) {
-      res.status(400).json({ message: "Incorrect password" });
-      return;
-    }
-
-    generateTokenAndSetCookies(user._id, res);
-
-    res.status(200).json({ 
-      _id: user._id,
-      username: user.username,
-      fullname: user.fullname,
-      email: user.email,
-      followers: user.followers,
-      following: user.following,
-      profileImg: user.profileImg,
-      coverImg: user.coverImg,
-    });
+    const sessionUser = await User.findOne({ username });
+    res.status(200).json(sessionUser);
   }
   catch (error) {
-    console.log("Error logging in user:", error.message);
+    console.log("Error in getSessionUser controller:", error.message);
     res.status(500).json({ message: "Internal Server Error" });
-  }
-};
-
-export const logout = async (_, res) => {
-  try {
-    res.cookie("jwt", "", { maxAge: 0 });
-    res.status(200).json({ message: "Logged out successfully" });
-  }
-  catch (error) {
-    console.log("Error logging out user:", error.message);
-    res.status(500).json({ message: "Internal Server Error" });    
-  }
-};
-
-export const getCurrentUser = async (req, res) => {
-  try {
-    const { user: { _id } } = req;
-    const currentUser = await User.findById(_id, { password: 0 });
-    res.status(200).json(currentUser);
-  }
-  catch (error) {
-    console.log("Error in getMe controller:", error.message);
-    res.status(500).json({ message: "Internal Server Erorr" });
   }
 };

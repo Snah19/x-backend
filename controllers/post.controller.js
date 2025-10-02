@@ -3,11 +3,10 @@ import User from "../models/user.model.js";
 import Notification from "../models/notification.model.js";
 
 export const createPost = async (req, res) => {
+  const { userId } = req.params;
+  const { text, imgs } = req.body;
+
   try {
-    const { text, imgs } = req.body;
-
-    const userId = req.user._id.toString();
-
     const user = await User.findById(userId);
 
     if (!user) {
@@ -35,6 +34,7 @@ export const createPost = async (req, res) => {
 };
 
 export const deletePost = async (req, res) => {
+  const { userId } = req.body;
   const { postId } = req.params
   try {
     const post = await Post.findById(postId);
@@ -44,7 +44,7 @@ export const deletePost = async (req, res) => {
       return;
     }
 
-    if (post.user.toString() !== req.user._id.toString()) {
+    if (post.user.toString() !== userId) {
       res.status(401).json({ message: "You are not authorized to delete this post" });
       return;
     }
@@ -60,7 +60,7 @@ export const deletePost = async (req, res) => {
 
 export const likeUnlikePost = async (req, res) => {
   const { postId } = req.params;
-  const userId = req.user._id;
+  const { userId } = req.body;
   try {
     const post = await Post.findById(postId);
     if (!post) {
@@ -102,7 +102,8 @@ export const likeUnlikePost = async (req, res) => {
 
 export const favUnfavPost = async (req, res) => {
   const { postId } = req.params;
-  const userId = req.user._id;
+  const { userId } = req.body;
+
   try {
     const post = await Post.findById(postId);
     if (!post) {
@@ -144,7 +145,7 @@ export const favUnfavPost = async (req, res) => {
 
 export const repostUnrepostPost = async (req, res) => {
   const { postId } = req.params;
-  const userId = req.user._id;
+  const { userId } = req.body;
   try {
     const post = await Post.findById(postId);
     if (!post) {
@@ -183,35 +184,6 @@ export const repostUnrepostPost = async (req, res) => {
   }
 };
 
-export const commentOnPost = async (req, res) => {
-  try {
-    const { text } = req.body;
-    const { postId } = req.params;
-    const userId = req.user._id;
-
-    if (!text) {
-      res.status(400).json({ error: "Text field is required" });
-      return;
-    }
-
-    const post = await Post.findById(postId);
-
-    if (!post) {
-      res.status(404).json({ message: "Post not found" });
-      return;
-    }
-
-    post.comments.push({ user: userId, text });
-    await post.save();
-
-    res.status(200).json(post);
-  }
-  catch (error) {
-    console.log("Error commenting on post:", error.message);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-};
-
 export const getForYouFeed = async (req, res) => {
   try {
     const page = Number(req.query.page) || 1;
@@ -242,7 +214,7 @@ export const getForYouFeed = async (req, res) => {
 };
 
 export const getFollowingPosts = async (req, res) => {
-  const userId = req.user._id;
+  const { userId } = req.params;
 
   try {
     const page = Number(req.query.page) || 1;

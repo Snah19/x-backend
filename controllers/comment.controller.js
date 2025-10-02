@@ -4,8 +4,7 @@ import Post from "../models/post.model.js";
 
 export const commentOnPost = async (req, res) => {
   const { postId } = req.params;
-  const userId = req.user._id;
-  const { content } = req.body;
+  const { userId, content } = req.body;
 
   try {
     const post = await Post.findById(postId);
@@ -41,7 +40,7 @@ export const getComments = async (req, res) => {
 
 export const likeUnlikeComment = async (req, res) => {
   const { commentId } = req.params;
-  const userId = req.user._id;
+  const { userId } = req.body;
   try {
     const comment = await Comment.findById(commentId);
 
@@ -74,9 +73,8 @@ export const likeUnlikeComment = async (req, res) => {
 };
 
 export const replyComment = async (req, res) => {
-  const userId = req.user._id;
   const { commentId } = req.params;
-  const { content } = req.body;
+  const { userId, content } = req.body;
 
   try {
     const comment = await Comment.findById(commentId);
