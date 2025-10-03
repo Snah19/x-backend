@@ -1,7 +1,11 @@
+import mongoose from "mongoose";
 import Notification from "../models/notification.model.js";
 import Post from "../models/post.model.js";
 import User from "../models/user.model.js";
 import bcrypt from "bcryptjs";
+
+const { Schema } = mongoose;
+const { ObjectId } = Schema.Types;
 
 export const getUserProfile = async (req, res) => {
   const { username } = req.params;
@@ -26,16 +30,8 @@ export const getSuggestedUser = async (req, res) => {
     const { userId } = req.params;
     const { following } = await User.findById(userId, { _id: 0, following: 1 });
 
-    const users = await User.aggregate(
-      [{
-        $match: {
-          _id: { $ne: userId }
-        }
-      },
-      {
-        $sample: { size: 10 }
-      }]
-    );
+    let users = await User.aggregate([{$sample: { size: 11 }}]);
+    users = users.filter(user => user._id.toString() !== userId);
 
     const filteredUsers = users.filter(user => !following.includes(user._id));
     const suggestedUsers = filteredUsers.slice(0, 4);
