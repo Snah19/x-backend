@@ -13,5 +13,4 @@ router.patch("/repost/:postId", repostUnrepostPost);
 router.get("/status/:postId", getPost);
 router.patch("/text/:postId", updatePostText);
 
-
 export default router;

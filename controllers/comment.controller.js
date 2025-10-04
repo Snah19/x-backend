@@ -1,6 +1,7 @@
 import Comment from "../models/comment.model.js";
 import Notification from "../models/notification.model.js";
 import Post from "../models/post.model.js";
+import { io } from "../server.js";
 
 export const commentOnPost = async (req, res) => {
   const { postId } = req.params;
@@ -14,6 +15,7 @@ export const commentOnPost = async (req, res) => {
       await Notification.create({ from: userId, to: post.user, post: postId, type: "comment", comment: { type: "comment", content } });
     }
 
+    io.emit("realtimeNotifications", { isNew: true });
     res.status(201).json(newComment);
   }
   catch (error) {
@@ -58,6 +60,7 @@ export const likeUnlikeComment = async (req, res) => {
         await Notification.create({ from: userId, to: comment.from, post: comment.postId, comment: { _id: comment._id, type: "like" }, type: "comment", });
       }
 
+      io.emit("realtimeNotifications", { isNew: true });
       res.status(200).json({ message: "Comment liked successfully" });
     }
     else {
@@ -84,6 +87,7 @@ export const replyComment = async (req, res) => {
       await Notification.create({ from: userId, to: comment.from, post: comment.postId, type: "comment", comment: { type: "reply", content } });
     }
 
+    io.emit("realtimeNotifications", { isNew: true });
     res.status(201).json(newReply);
   }
   catch (error) {
