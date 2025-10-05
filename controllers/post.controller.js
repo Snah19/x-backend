@@ -2,6 +2,7 @@ import { io } from "../server.js";
 
 import Post from "../models/post.model.js";
 import User from "../models/user.model.js";
+import Comment from "../models/comment.model.js";
 import Notification from "../models/notification.model.js";
 
 export const createPost = async (req, res) => {
@@ -92,14 +93,16 @@ export const likeUnlikePost = async (req, res) => {
         await notification.save();
         io.emit("realtimeNotifications", { isNew: true });
       }
-
+      io.emit("realtimePostStats", { postId });
       res.status(200).json({ message: "Post liked successfully" });
     }
     else {
       await Post.updateOne({ _id: postId }, { $pull: { likes: userId } });
       await User.updateOne({ _id: userId }, { $pull: { likedPosts: postId } });
+      io.emit("realtimePostStats", { postId });
       res.status(200).json({ message: "Post unliked successfully" });
     }
+
   }
   catch (error) {
     console.log("Error liking/unliking post:", error.message);
@@ -137,11 +140,14 @@ export const favUnfavPost = async (req, res) => {
         io.emit("realtimeNotifications", { isNew: true });
       }
 
+      io.emit("realtimePostStats", { postId });
       res.status(200).json({ message: "Post added to favorite successfully" });
     }
     else {
       await Post.updateOne({ _id: postId }, { $pull: { favorites: userId } });
       await User.updateOne({ _id: userId }, { $pull: { favoritePosts: postId } });
+
+      io.emit("realtimePostStats", { postId });
       res.status(200).json({ message: "Post removed from favorite successfully" });
     }
   }
@@ -180,11 +186,15 @@ export const repostUnrepostPost = async (req, res) => {
         io.emit("realtimeNotifications", { isNew: true });
       }
 
+      io.emit("realtimePostStats", { postId });
       res.status(200).json({ message: "Post reposted successfully" });
     }
     else {
       await Post.updateOne({ _id: postId }, { $pull: { reposts: userId } });
       await User.updateOne({ _id: userId }, { $pull: { repostedPosts: postId } });
+
+      io.emit("realtimeNotifications", { isNew: true });
+      res.status(200).json({ message: "Post unreposted successfully" });
     }
   }
   catch (error) {
@@ -308,5 +318,19 @@ export const updatePostText = async (req, res) => {
   catch (error) {
     console.log(`Error getting post: ${postId}:`, error.message);
     res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const getPostStats = async (req, res) => {
+  const { postId } = req.params;
+  try {
+    const { likes, reposts, favorites } = await Post.findById(postId);
+    const comments = await Comment.countDocuments({ postId });
+
+    res.status(200).json({ comments, likes: likes.length, reposts: reposts.length, favorites: favorites.length });
+  }
+  catch (error) {
+    console.log(`Error getting post stats:`, error);
+    res.status(200).json({ message: "Internal Server Error" });
   }
 };

@@ -16,6 +16,8 @@ export const commentOnPost = async (req, res) => {
     }
 
     io.emit("realtimeNotifications", { isNew: true });
+    io.emit("realtimePostStats", { postId });
+    io.emit("realtimeComment", { postId });
     res.status(201).json(newComment);
   }
   catch (error) {
@@ -43,34 +45,38 @@ export const getComments = async (req, res) => {
 export const likeUnlikeComment = async (req, res) => {
   const { commentId } = req.params;
   const { userId } = req.body;
-  try {
-    const comment = await Comment.findById(commentId);
 
-    if (!comment) {
-      res.status(404).json({ message: "Comment not found" });
-      return;
-    }
+  try {
+    let comment = await Comment.findById(commentId);
+
+    if (!comment) return res.status(404).json({ message: "Comment not found" });
 
     const isLiked = comment.likes.includes(userId);
 
-    if (!isLiked) {
-      await Comment.findByIdAndUpdate(commentId, { $push: { likes: userId } }, { new: true });
+    let updatedComment;
 
-      if (userId.toString() !== comment.from.toString()) {
-        await Notification.create({ from: userId, to: comment.from, post: comment.postId, comment: { _id: comment._id, type: "like" }, type: "comment", });
+    if (!isLiked) {
+      updatedComment = await Comment.findByIdAndUpdate(commentId, { $push: { likes: userId } }, { new: true });
+
+      if (userId !== comment.from.toString()) {
+        await Notification.create({ from: userId, to: comment.from, post: comment.postId, comment: { _id: comment._id, type: "comment" } });
       }
 
       io.emit("realtimeNotifications", { isNew: true });
+      io.emit("realtimeComment", { postId: comment.postId });
+
       res.status(200).json({ message: "Comment liked successfully" });
     }
     else {
-      await Comment.findByIdAndUpdate(commentId, { $pull: { likes: userId } }, { new: true });
+      updatedComment = await Comment.findByIdAndUpdate(commentId, { $pull: { likes: userId } }, { new: true });
       res.status(200).json({ message: "Comment unliked successfully" });
     }
 
+    // Emit updated like count to all clients
+    io.emit("commentLikesUpdate", { commentId, totalLikes: updatedComment.likes.length });
   }
   catch (error) {
-    console.log("Error liking/unliking comment");
+    console.log("Error liking/unliking comment:", error.message);
     res.status(500).json({ message: "Internal Server Error" });
   }
 };
@@ -88,6 +94,7 @@ export const replyComment = async (req, res) => {
     }
 
     io.emit("realtimeNotifications", { isNew: true });
+    io.emit("realtimeReply", { commentId });
     res.status(201).json(newReply);
   }
   catch (error) {
@@ -133,5 +140,43 @@ export const deleteComments = async (req, res) => {
   }
   catch (error) {
     console.log("Error deleting comments:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
   }
 }
+
+export const getCommentStats = async (req, res) => {
+  const { commentId } = req.params;
+
+  try {
+    const { likes } = await Comment.findById(commentId);
+    res.status(200).json({ likes: likes.length });
+  }
+  catch (error) {
+    console.log("Error getting comment stats:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+export const emitCommentLikes = async (req, res) => {
+  const { commentId } = req.params;
+
+  try {
+    const comment = await Comment.findById(commentId).select("likes");
+
+    if (!comment) {
+      return res.status(404).json({ message: "Comment not found" });
+    }
+
+    // Emit only to clients who care about this comment
+    io.emit("commentLikesUpdate", {
+      commentId,
+      totalLikes: comment.likes.length,
+    });
+
+    res.status(200).json({ message: "Like count emitted successfully" });
+  }
+  catch (error) {
+    console.error("Error emitting comment likes:", error.message);
+    res.status(500).json({ message: "Internal Server Error" });
+  }
+};

@@ -42,12 +42,6 @@ app.use("/api/posts", postRoutes);
 app.use("/api/notifications", notificationRoutes);
 app.use("/api/comments", commentRoutes);
 
-
-// app.listen(PORT, () => {
-//   connectDB();
-//   console.log(`Server is running on port ${PORT}`);
-// });
-
 server.listen(PORT, () => {
   connectDB();
   console.log(`Server is running on port ${PORT}`);

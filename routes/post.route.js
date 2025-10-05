@@ -1,5 +1,5 @@
 import express from "express";
-import { createPost, deletePost, updatePostText, favUnfavPost, getFollowingPosts, getForYouFeed, getPost, getUserPosts, likeUnlikePost, repostUnrepostPost } from "../controllers/post.controller.js";
+import { createPost, deletePost, updatePostText, favUnfavPost, getFollowingPosts, getForYouFeed, getPost, getUserPosts, likeUnlikePost, repostUnrepostPost, getPostStats } from "../controllers/post.controller.js";
 
 const router = express.Router();
 router.get("/for-you", getForYouFeed);
@@ -12,5 +12,6 @@ router.patch("/favorite/:postId", favUnfavPost);
 router.patch("/repost/:postId", repostUnrepostPost);
 router.get("/status/:postId", getPost);
 router.patch("/text/:postId", updatePostText);
+router.get("/stats/:postId", getPostStats);
 
 export default router;
