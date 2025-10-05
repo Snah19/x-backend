@@ -10,6 +10,7 @@ export const commentOnPost = async (req, res) => {
   try {
     const post = await Post.findById(postId);
     const newComment = await Comment.create({ postId, from: userId, content});
+    const totalComments = await Comment.countDocuments({ postId });
 
     if (newComment?._id) {
       await Notification.create({ from: userId, to: post.user, post: postId, type: "comment", comment: { type: "comment", content } });
@@ -17,7 +18,7 @@ export const commentOnPost = async (req, res) => {
 
     io.emit("realtimeNotifications", { isNew: true });
     io.emit("realtimePostStats", { postId });
-    io.emit("realtimeComment", { postId });
+    io.emit("realtimeTotalComments", { postId, totalComments });
     res.status(201).json(newComment);
   }
   catch (error) {
@@ -48,7 +49,6 @@ export const likeUnlikeComment = async (req, res) => {
 
   try {
     let comment = await Comment.findById(commentId);
-
     if (!comment) return res.status(404).json({ message: "Comment not found" });
 
     const isLiked = comment.likes.includes(userId);
@@ -73,7 +73,7 @@ export const likeUnlikeComment = async (req, res) => {
     }
 
     // Emit updated like count to all clients
-    io.emit("commentLikesUpdate", { commentId, totalLikes: updatedComment.likes.length });
+    io.emit("realtimeCommentLikes", { commentId, totalLikes: updatedComment.likes.length });
   }
   catch (error) {
     console.log("Error liking/unliking comment:", error.message);
@@ -88,6 +88,7 @@ export const replyComment = async (req, res) => {
   try {
     const comment = await Comment.findById(commentId);
     const newReply = await Comment.create({ from: userId, to: commentId, postId: comment.postId, content });
+    const totalComments = await Comment.countDocuments({ postId: comment.postId });
 
     if (newReply) {
       await Notification.create({ from: userId, to: comment.from, post: comment.postId, type: "comment", comment: { type: "reply", content } });
@@ -95,6 +96,7 @@ export const replyComment = async (req, res) => {
 
     io.emit("realtimeNotifications", { isNew: true });
     io.emit("realtimeReply", { commentId });
+    io.emit("realtimeTotalComments", { postId: comment.postId, totalComments });
     res.status(201).json(newReply);
   }
   catch (error) {
@@ -143,19 +145,6 @@ export const deleteComments = async (req, res) => {
     res.status(500).json({ message: "Internal Server Error" });
   }
 }
-
-export const getCommentStats = async (req, res) => {
-  const { commentId } = req.params;
-
-  try {
-    const { likes } = await Comment.findById(commentId);
-    res.status(200).json({ likes: likes.length });
-  }
-  catch (error) {
-    console.log("Error getting comment stats:", error.message);
-    res.status(500).json({ message: "Internal Server Error" });
-  }
-};
 
 export const emitCommentLikes = async (req, res) => {
   const { commentId } = req.params;

@@ -69,18 +69,15 @@ export const likeUnlikePost = async (req, res) => {
   const { postId } = req.params;
   const { userId } = req.body;
   try {
-    const post = await Post.findById(postId);
-    if (!post) {
-      res.status(404).json({ message: "Post not found" });
-      return;
-    }
+    let post = await Post.findById(postId);
+    if (!post) return res.status(404).json({ message: "Post not found" });
 
     const isLiked = post.likes.includes(userId);
+    let updatedPost;
     
     if (!isLiked) {
-      post.likes.push(userId);
-      await User.updateOne({ _id: userId }, { $push: { likedPosts: postId } });
-      await post.save();
+      updatedPost = await Post.findOneAndUpdate({ _id: postId }, { $push: { likes: userId } }, { new: true });
+      await User.updateOne({ _id: userId }, { $push: { likedPosts: postId } }, { new: true });
 
       if (post.user.toString() !== userId.toString()) {
         const notification = new Notification({
@@ -93,16 +90,17 @@ export const likeUnlikePost = async (req, res) => {
         await notification.save();
         io.emit("realtimeNotifications", { isNew: true });
       }
-      io.emit("realtimePostStats", { postId });
+
       res.status(200).json({ message: "Post liked successfully" });
     }
     else {
-      await Post.updateOne({ _id: postId }, { $pull: { likes: userId } });
-      await User.updateOne({ _id: userId }, { $pull: { likedPosts: postId } });
-      io.emit("realtimePostStats", { postId });
+      updatedPost = await Post.findOneAndUpdate({ _id: postId }, { $pull: { likes: userId } }, { new: true });
+      await User.updateOne({ _id: userId }, { $pull: { likedPosts: postId } }, { new: true });
+
       res.status(200).json({ message: "Post unliked successfully" });
     }
 
+    io.emit("realtimePostLikes", { postId, totalLikes: updatedPost.likes.length });
   }
   catch (error) {
     console.log("Error liking/unliking post:", error.message);
@@ -122,11 +120,10 @@ export const favUnfavPost = async (req, res) => {
     }
 
     const isFav = post.favorites.includes(userId);
-    
+    let updatedPost;
     if (!isFav) {
-      post.favorites.push(userId);
+      updatedPost = await Post.findOneAndUpdate({ _id: postId }, { $push: { favorites: userId } }, { new: true });
       await User.updateOne({ _id: userId }, { $push: { favoritePosts: postId } });
-      await post.save();
 
       if (post.user.toString() !== userId.toString()) {
         const notification = new Notification({
@@ -140,16 +137,16 @@ export const favUnfavPost = async (req, res) => {
         io.emit("realtimeNotifications", { isNew: true });
       }
 
-      io.emit("realtimePostStats", { postId });
       res.status(200).json({ message: "Post added to favorite successfully" });
     }
     else {
-      await Post.updateOne({ _id: postId }, { $pull: { favorites: userId } });
+      updatedPost = await Post.findOneAndUpdate({ _id: postId }, { $pull: { favorites: userId } }, { new: true });
       await User.updateOne({ _id: userId }, { $pull: { favoritePosts: postId } });
 
-      io.emit("realtimePostStats", { postId });
       res.status(200).json({ message: "Post removed from favorite successfully" });
     }
+
+    io.emit("realtimePostFavorites", { postId, totalFavorites: updatedPost.favorites.length });
   }
   catch (error) {
     console.log("Error adding/removing post to favorite:", error.message);
@@ -162,17 +159,13 @@ export const repostUnrepostPost = async (req, res) => {
   const { userId } = req.body;
   try {
     const post = await Post.findById(postId);
-    if (!post) {
-      res.status(404).json({ message: "Post not found" });
-      return;
-    }
+    if (!post) return res.status(404).json({ message: "Post not found" });
 
     const isReposted = post.reposts.includes(userId);
-
+    let updatedPost;
     if (!isReposted) {
-      post.reposts.push(userId);
+      updatedPost = await Post.findOneAndUpdate({ _id: postId }, { $push: { reposts: userId } }, { new: true });
       await User.updateOne({ _id: userId }, { $push: { repostedPosts: postId } });
-      await post.save();
 
       if (post.user.toString() !== userId.toString()) {
         const notification = new Notification({
@@ -186,16 +179,17 @@ export const repostUnrepostPost = async (req, res) => {
         io.emit("realtimeNotifications", { isNew: true });
       }
 
-      io.emit("realtimePostStats", { postId });
       res.status(200).json({ message: "Post reposted successfully" });
     }
     else {
-      await Post.updateOne({ _id: postId }, { $pull: { reposts: userId } });
+      updatedPost = await Post.findOneAndUpdate({ _id: postId }, { $pull: { reposts: userId } }, { new: true });
       await User.updateOne({ _id: userId }, { $pull: { repostedPosts: postId } });
 
       io.emit("realtimeNotifications", { isNew: true });
       res.status(200).json({ message: "Post unreposted successfully" });
     }
+
+    io.emit("realtimePostReposts", { postId, totalReposts: updatedPost.reposts.length });
   }
   catch (error) {
     console.log("Error reposting/unreposting post:", error.message);
