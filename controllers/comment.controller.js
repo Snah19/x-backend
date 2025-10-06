@@ -17,8 +17,7 @@ export const commentOnPost = async (req, res) => {
     }
 
     io.emit("realtimeNotifications", { isNew: true });
-    io.emit("realtimePostStats", { postId });
-    io.emit("realtimeTotalComments", { postId, totalComments });
+    io.emit("realtimeComment", { postId });
     res.status(201).json(newComment);
   }
   catch (error) {
