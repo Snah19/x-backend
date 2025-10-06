@@ -59,7 +59,7 @@ export const likeUnlikeComment = async (req, res) => {
       updatedComment = await Comment.findByIdAndUpdate(commentId, { $push: { likes: userId } }, { new: true });
 
       if (userId !== comment.from.toString()) {
-        await Notification.create({ from: userId, to: comment.from, post: comment.postId, comment: { _id: comment._id }, type: "comment" });
+        await Notification.create({ from: userId, to: comment.from, post: comment.postId, comment: { _id: comment._id, type: "like", content: comment.content }, type: "comment" });
       }
 
       io.emit("realtimeNotifications", { isNew: true });
