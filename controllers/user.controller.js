@@ -17,7 +17,10 @@ export const getUserProfile = async (req, res) => {
       return;
     }
 
-    res.status(200).json(user);
+    const totalPosts = await Post.countDocuments({ user: user._id });
+    console.log({ ...user, totalPosts });
+
+    res.status(200).json({ ...user._doc, totalPosts });
   }
   catch (error) {
     console.log("Error getting user profile:", error.message);
